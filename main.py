@@ -1,15 +1,25 @@
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, Path, Body, Header, Cookie
 from enum import Enum
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Annotated
 
-
+class Image(BaseModel):
+    url: str
+    name: str
 
 class Item(BaseModel):
     name: str
-    description: str | None = None
-    price: float
+    description: str | None = Field(
+        default=None, title="The description of the item", max_length=300
+    )
+    price: float = Field(gt=0, description="The price must be greater than zero")
     tax: float | None = None
+    image: list[Image] | None = None
+
+
+class User(BaseModel):
+    username: str
+    full_name: str | None = None    
 
 
 app = FastAPI()
@@ -59,5 +69,24 @@ async def read_items(q: Annotated[str | None, Query(max_length=3)] = None):
 
 
 @app.put("/items/{item_id}")
-async def update_item(item_id: int, item: Item):
-    return {"item_id": item_id, **item.dict()}
+async def update_item(item_id: int, item: Annotated[Item, Body(embed=True)]):
+    results = {"item_id": item_id, "item": item}
+    return results
+
+
+
+@app.post("/images/multiple/")
+async def create_multiple_images(images: list[Image]):
+    
+    return images
+
+
+@app.get("/header/")
+async def read_items(user_agent: Annotated[str | None, Header()] = None):
+    return {"User-Agent": user_agent}    
+
+
+
+@app.get("/cookie/")
+async def read_items(cookie: Annotated[str | None, Cookie()] = None):
+    return {"cookie": cookie}      
